@@ -1,0 +1,84 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+{{ include "service.labels.standard" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "service.labels.standard" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "service.labels.standard" . | indent 8 }}
+    spec:
+{{- if .Values.log.fluent.enable }}
+      volumes:
+      - name: logsdir-cfs
+        emptyDir: {}
+      - name: fluent-bit-conf
+        configMap:
+          name: {{ .Release.Name }}-fluent-bit-conf
+          items:
+            - key: fluent-bit.conf
+              path: fluent-bit.conf
+            - key: parsers.conf
+              path: parsers.conf
+          defaultMode: 420
+{{- end }}
+      containers:
+{{- if .Values.log.fluent.enable }}
+        - name: fluent-bit
+          image: "registry.saas.crland.com.cn/tools/fluent-bit:0.13.0800"
+          imagePullPolicy: Always
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: HOST_IP
+            valueFrom:
+             fieldRef:
+                fieldPath: status.hostIP
+          volumeMounts:
+            - name: fluent-bit-conf
+              mountPath: /fluent-bit/etc
+            - name: logsdir-cfs
+              mountPath: {{ .Values.log.path }}
+{{- end }}
+        - name: {{ .Release.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+{{- range $name, $value := .Values.env.open }}
+{{- if not (empty $value) }}
+          - name: {{ $name | quote }}
+            value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            - name: socket
+              containerPort: {{ .Values.service.txport }}
+              protocol: TCP
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 12 }}
+          livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 12 }}
+{{- if .Values.log.fluent.enable }}
+          volumeMounts:
+            - name: logsdir-cfs
+              mountPath: {{ .Values.log.path }}
+{{- end }}

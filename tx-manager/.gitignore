@@ -1,0 +1,36 @@
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+logback-spring.xml
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+mvnw
+mvnw.cmd
+rebel.xml
+CodeGeneratorCode.java
+application-default.yml
+application-dinghuang.yml
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+/build/
+
+/var/
+var/**
+log/**

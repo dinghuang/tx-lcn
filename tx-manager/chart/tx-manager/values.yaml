@@ -1,0 +1,75 @@
+replicaCount: 1
+
+image:
+  repository: registry.saas.crland.com.cn/crland-zzsale/sale-txmanager-service
+  pullPolicy: Always
+
+env:
+  open:
+    SERVER_PORT: 8000
+    MANAGEMENT_SERVER_PORT: 8001
+    TX_LCN_MANAGER_PORT: 8002
+    TX_LCN_MANAGER_HOST: 0.0.0.0
+    SPRING_PROFILES_ACTIVE: dev
+    # 是否启用pinpoint，启用时填写以下参数
+    ENABLE_PINPOINT: false
+    APPLICATION_NAME: "sale-sale-dev"
+    COLLECTOR_IP: "10.107.20.65"
+    COLLECTOR_SPAN_PORT: "9996"
+    COLLECTOR_STAT_PORT: "9995"
+    COLLECTOR_TCP_PORT: "9994"
+    JAVA_OPTS: "-server -XX:+UseG1GC -Xmx1g -Xms1g -Xmn256m"
+    EX_EMAIL:
+    # 配置文件加密的盐
+    JASYPT_ENCRYPTOR_PASSWORD:
+
+service:
+  port: 8000
+  txport: 8002
+
+# 日志采集相关配置
+log:
+  fluent:
+    # 日志采集程序环境变量, 是否启用，默认不启用ENABLE:false
+    enable: false
+    # 机房 crland | aliyun | tencent
+    idc: tencent
+    # 环境 dev | uat | sit | prod
+    env: dev
+    # 以Choerodon上[projectCode]-[applicationCode]组合,比如techplatform-pmdms
+    tag: sale-txmanager
+    fluentd:
+      # fluentd程序的地址，详情联系技术中台人员
+      host: tencent-fluentd-uat.tencent-techplatform-uat
+      port: 8014
+    parse:
+      # 日志时间和内容匹配正则(ruby)，参考 http://rubular.com/r/X7BH0M4Ivm
+      timeformat: "%Y-%m-%d %H:%M:%S.%L"
+      regex: ^(?<logtime>\d{4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2}.\d{3})\s*(?<level>[^ ]*\s)\(\s*(?<class>.*)\) -\s*(?<message>[\s\S]*)$
+  # 日志文件目录
+  path: log/sale/
+
+resources:
+  limits:
+    memory: 4Gi
+  requests:
+    memory: 2Gi
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8001
+  failureThreshold: 3
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 3
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8001
+  initialDelaySeconds: 300
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 3

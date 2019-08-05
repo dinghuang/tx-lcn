@@ -1,0 +1,49 @@
+{{- if .Values.log.fluent.enable }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-fluent-bit-conf
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush          1
+        Daemon         Off
+        Log_Level      debug
+        Parsers_File   parsers.conf
+
+    [INPUT]
+        Name           tail
+        Tag            {{ .Values.log.fluent.tag }}.{{ .Values.log.fluent.idc }}-{{ .Values.log.fluent.env }}.application
+        Path           {{ .Values.log.path }}/*.log
+        DB             /var/log/flb_kube.db
+        Multiline         On
+        Parser_Firstline  custom
+        Buffer_Chunk_Size 5MB
+        Mem_Buf_Limit     5MB
+        Buffer_Max_Size   10MB
+
+    [FILTER]
+        Name record_modifier
+        Match *
+        Record pod_name ${POD_NAME}
+        Record image {{ .Values.image.repository }}:{{ .Chart.Version }}
+        Record image_version {{ .Chart.Version }}
+        Record namespace ${POD_NAMESPACE}
+        Record node_ip ${HOST_IP}
+
+    [OUTPUT]
+        Name   forward
+        Match  *
+        Host   {{ .Values.log.fluent.fluentd.host }}
+        Port   {{ .Values.log.fluent.fluentd.port }}
+
+
+  parsers.conf: |
+    [PARSER]
+        Name        custom
+        Format      regex
+        Time_Key    time
+        Time_Format {{ .Values.log.fluent.parse.timeformat }}
+        Time_Offset +0800
+        Regex       {{ .Values.log.fluent.parse.regex }}
+{{- end }}
